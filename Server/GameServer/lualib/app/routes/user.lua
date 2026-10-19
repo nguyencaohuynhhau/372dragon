@@ -42,7 +42,9 @@ router:post("/login", function(c)
     local info = users[username]
     if info and info.password == password then
         local accesstoken = utils.gen_accesstoken(username)
-        c.token.set(accesstoken, username)
+        if c.token and c.token.set then
+            c.token.set(accesstoken, username)
+        end
         c:send_json({
             code = "OK",
             msg = "登录成功",

@@ -129,7 +129,10 @@ end
 
 function CMD.register(process_id)
     if node_list[process_id] then
-        return false, "node is already registerd."
+        skynet.logw("node", process_id, "already registered, unregistering old node")
+        local old_node = node_list[process_id]
+        node_list[process_id] = nil
+        broad_event({ name = "offline", node = old_node })
     end
     local process = process_list[process_id]
     if not process then

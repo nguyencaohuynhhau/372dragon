@@ -38,11 +38,11 @@ local safe_open = function(filename, mode)
         end
     end
     if filename then
-        local is_lua = string.find(filename, "%.lua")
-        local is_c = string.find(filename, "%.c")
-        local is_cpp = string.find(filename, "%.cpp")
-        local is_cc = string.find(filename, "%.cc")
-        local is_h = string.find(filename, "%.h")
+        local is_lua = string.find(filename, "%.lua$")
+        local is_c = string.find(filename, "%.c$")
+        local is_cpp = string.find(filename, "%.cpp$")
+        local is_cc = string.find(filename, "%.cc$")
+        local is_h = string.find(filename, "%.h$")
         assert((not is_c) and (not is_cpp) and (not is_cc) and (not is_h), filename)
     end
     return open(filename, mode)
