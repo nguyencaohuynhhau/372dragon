@@ -178,26 +178,38 @@ cmd_base() {
     fi
 
     # 1. Manager（svrtype 必须是 Manager，main.lua 走 init_manager_server 分支）
-    start_service Manager 8 config_8
-    info "等待 Manager 稳定（5 秒）..."
-    sleep 5
+    if ! is_running 8; then
+        start_service Manager 8 config_8
+        info "等待 Manager 稳定（5 秒）..."
+        sleep 5
+    else
+        start_service Manager 8 config_8
+    fi
 
     # 2. DataCenter（必须在 Manager 之后启动）
-    start_service DataCenter 9 config_9
-    info "等待 DataCenter 稳定（5 秒）..."
-    sleep 5
+    if ! is_running 9; then
+        start_service DataCenter 9 config_9
+        info "等待 DataCenter 稳定（5 秒）..."
+        sleep 5
+    else
+        start_service DataCenter 9 config_9
+    fi
 
     # 3. Tool（含 Web 服务，端口 8000）
-    start_service Tool 6 config_6
-    # [audit 2026-09-03] Game phai khoi dong SAU khi Tool da dang ky .ranking, neu khong cluster_agent
-    # cua Game khong bao gio proxy .ranking (limit_shop/activity/huabang loi im lang + traceback moi lan vao scene)
-    info "Cho Tool dang ky service ranking (toi da 60 giay)..."
-    for _i in $(seq 1 60); do
-        _tlog=$(ls -t ${GAME_DIR}/../log/*/Tool6_*.log 2>/dev/null | head -1)
-        if [ -n "$_tlog" ] && grep -q "LAUNCH snlua ranking" "$_tlog"; then break; fi
-        sleep 1
-    done
-    sleep 5
+    if ! is_running 6; then
+        start_service Tool 6 config_6
+        # [audit 2026-09-03] Game phai khoi dong SAU khi Tool da dang ky .ranking, neu khong cluster_agent
+        # cua Game khong bao gio proxy .ranking (limit_shop/activity/huabang loi im lang + traceback moi lan vao scene)
+        info "Cho Tool dang ky service ranking (toi da 60 giay)..."
+        for _i in $(seq 1 60); do
+            _tlog=$(ls -t ${GAME_DIR}/../log/*/Tool6_*.log 2>/dev/null | head -1)
+            if [ -n "$_tlog" ] && grep -q "LAUNCH snlua ranking" "$_tlog"; then break; fi
+            sleep 1
+        done
+        sleep 5
+    else
+        start_service Tool 6 config_6
+    fi
 
     success "基础服务启动完毕"
 }
@@ -230,16 +242,25 @@ cmd_all() {
     # 先启动基础服务
     cmd_base
 
-    info "等待基础服务就绪（3 秒）..."
-    sleep 3
-
     # 启动所有已配置的区
     for zone_num in "${ZONE_LIST[@]}"; do
         local processid
         processid=$(zone_to_pid "$zone_num")
         local config_file="config_${processid}"
-        start_service Game "$processid" "$config_file"
-        sleep 2
+        if ! is_running "$processid"; then
+            info "等待基础服务就绪（3 秒）..."
+            sleep 3
+            start_service Game "$processid" "$config_file"
+            info "Đang nạp 198 bản đồ Game ${zone_num}区 (khoảng 10-15 giây)..."
+            for _i in $(seq 1 35); do
+                local _glog
+                _glog=$(ls -t ${GAME_DIR}/../log/*/Game2_*.log 2>/dev/null | head -1)
+                if [ -n "$_glog" ] && grep -q "scene startup done" "$_glog"; then break; fi
+                sleep 1
+            done
+        else
+            start_service Game "$processid" "$config_file"
+        fi
     done
 
     success "全部服务启动完毕"
