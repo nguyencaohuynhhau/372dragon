@@ -160,16 +160,21 @@ cmd_base() {
     title "启动基础服务"
 
     # Đảm bảo MongoDB và Mosquitto chạy trước
-    if ! ss -tulpn | grep -q ':27018\b'; then
+    if ! nc -z 127.0.0.1 27018 2>/dev/null; then
         info "Khởi động MongoDB (27018)..."
-        rm -f "${SERVER_DIR}/mongod.pid"
-        mongod --config "${SERVER_DIR}/mongod.conf"
-        sleep 2
+        systemctl start tlbb-mongod 2>/dev/null || mongod --config "${SERVER_DIR}/mongod.conf" 2>/dev/null || true
+        for _i in $(seq 1 10); do
+            if nc -z 127.0.0.1 27018 2>/dev/null; then break; fi
+            sleep 1
+        done
     fi
-    if ! ss -tulpn | grep -q ':1884\b'; then
+    if ! nc -z 127.0.0.1 1884 2>/dev/null; then
         info "Khởi động Mosquitto (1884)..."
-        nohup mosquitto -c "${SERVER_DIR}/mosquitto.conf" > /dev/null 2>&1 &
-        sleep 1
+        systemctl start mosquitto 2>/dev/null || nohup mosquitto -c "${SERVER_DIR}/mosquitto.conf" > /dev/null 2>&1 &
+        for _i in $(seq 1 5); do
+            if nc -z 127.0.0.1 1884 2>/dev/null; then break; fi
+            sleep 1
+        done
     fi
 
     # 1. Manager（svrtype 必须是 Manager，main.lua 走 init_manager_server 分支）
@@ -325,6 +330,19 @@ cmd_status() {
         fi
     }
 
+    # Infrastructure
+    if nc -z 127.0.0.1 27018 2>/dev/null; then
+        success "MongoDB(port=27018) — 运行中"
+    else
+        error  "MongoDB(port=27018) — 未运行"
+    fi
+
+    if nc -z 127.0.0.1 1884 2>/dev/null; then
+        success "Mosquitto(port=1884) — 运行中"
+    else
+        error  "Mosquitto(port=1884) — 未运行"
+    fi
+
     # 基础服务
     check_service Manager    8
     check_service DataCenter 9
@@ -341,6 +359,26 @@ cmd_status() {
 }
 
 # ============================================================
+# 子命令: run/watch — 启动全部服务并实时监控日志（防止 WSL 空闲退出）
+# ============================================================
+cmd_run() {
+    cmd_all
+    echo ""
+    cmd_status
+    echo ""
+    info "Server đã sẵn sàng! Đang truyền phát nhật ký Game 1区 trực tiếp..."
+    info "Đừng đóng cửa sổ này khi đang chơi game. Nhấn Ctrl+C để dừng."
+    echo ""
+    local latest_log
+    latest_log=$(ls -t "${GAME_DIR}"/../log/*/Game2_*.log 2>/dev/null | head -n 1)
+    if [ -n "$latest_log" ]; then
+        tail -f -n 20 "$latest_log"
+    else
+        sleep infinity
+    fi
+}
+
+# ============================================================
 # 帮助信息
 # ============================================================
 cmd_help() {
@@ -351,6 +389,7 @@ cmd_help() {
     echo "  $0 <子命令> [参数]"
     echo ""
     echo "可用子命令:"
+    echo -e "  ${GREEN}run${NC}               启动全部并 giữ cửa sổ realtime (khuyến nghị)"
     echo -e "  ${GREEN}base${NC}              启动基础服务 (Manager → DataCenter → Tool)"
     echo -e "  ${GREEN}zone <区号>${NC}       启动指定区 Game 进程 (区号+1=processid)"
     echo -e "  ${GREEN}all${NC}               启动全部服务 (base + 所有已配置区)"
@@ -378,6 +417,8 @@ cmd_help() {
 # 入口：根据参数分发子命令
 # ============================================================
 case "${1:-}" in
+    run)        cmd_run                 ;;
+    watch)      cmd_run                 ;;
     base)       cmd_base                ;;
     zone)       cmd_zone      "${2:-}"  ;;
     all)        cmd_all                 ;;

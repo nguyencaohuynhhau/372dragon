@@ -1,14 +1,10 @@
 @echo off
-title TLBB Server Manager - WSL2
+title TLBB Server - WSL2 [Dang chay]
+color 0A
 echo ===================================================
-echo   Dang khoi dong TLBB Game Server tren WSL2...
+echo   TLBB 3.72 Game Server Manager (WSL2)
+echo   Dang kiem tra va khoi dong toan bo he thong...
 echo ===================================================
-wsl -d Ubuntu-22.04 -u havvng -- bash -c "cd ~/372dragon/Server/GameServer && ./start_zone.sh all"
 echo.
-echo Dang kiem tra trang thai sau khi khoi dong:
-wsl -d Ubuntu-22.04 -u havvng -- bash -c "cd ~/372dragon/Server/GameServer && ./start_zone.sh status"
-echo.
-echo ===================================================
-echo   Server da san sang! Ban co the mo Play.cmd
-echo ===================================================
+wsl -d Ubuntu-22.04 -u havvng -- bash -c "cd ~/372dragon/Server/GameServer && ./start_zone.sh run"
 pause
