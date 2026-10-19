@@ -159,6 +159,19 @@ stop_service() {
 cmd_base() {
     title "启动基础服务"
 
+    # Đảm bảo MongoDB và Mosquitto chạy trước
+    if ! ss -tulpn | grep -q ':27018\b'; then
+        info "Khởi động MongoDB (27018)..."
+        rm -f "${SERVER_DIR}/mongod.pid"
+        mongod --config "${SERVER_DIR}/mongod.conf"
+        sleep 2
+    fi
+    if ! ss -tulpn | grep -q ':1884\b'; then
+        info "Khởi động Mosquitto (1884)..."
+        nohup mosquitto -c "${SERVER_DIR}/mosquitto.conf" > /dev/null 2>&1 &
+        sleep 1
+    fi
+
     # 1. Manager（svrtype 必须是 Manager，main.lua 走 init_manager_server 分支）
     start_service Manager 8 config_8
     info "等待 Manager 稳定（5 秒）..."
