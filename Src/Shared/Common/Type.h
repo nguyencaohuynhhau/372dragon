@@ -1,4 +1,4 @@
-﻿//
+//
 //文件名称：	Type.h
 //功能描述：	类型定义，区分不同操作系统间系统调用的设置，所有当前工程
 //				内的代码都必须第一个引用此文件
@@ -77,7 +77,10 @@ typedef struct _Int64
 
 
 
+#ifndef _GUID_T_DEFINED_
+#define _GUID_T_DEFINED_
 typedef UINT			GUID_t;	//32位唯一编号。
+#endif
 								//如果用于表示用户唯一ID号，用户部分为9位
 								//前三位为世界号,世界号0～200为正式数据，
 								//					   201～MAX_WORLD-1为测试数据

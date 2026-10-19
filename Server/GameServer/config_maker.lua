@@ -29,9 +29,6 @@ local config = string.format([[
     svrtype = "%s"
     __nowaiting = true
 
-    --vscode debug: uncomment below, comment daemon and logger
-    --vscdbg_open = "$vscdbg_open"
-    --vscdbg_workdir = "$vscdbg_workdir"
 ]], env, script_root, config_path, thread, loglevel,
    processid, scene_config, processid, svrtype, processid, svrtype)
 print(config)

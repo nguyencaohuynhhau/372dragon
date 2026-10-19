@@ -173,6 +173,12 @@ logger_init(struct logger * inst, struct skynet_context *ctx, const char * parm)
 			strcpy(inst->prefix, prefix);
 			strcpy(inst->path, path);
 			checkfilestate(inst);
+		} else if (n == 1) {
+			inst->prefix = skynet_malloc(strlen(prefix)+1);
+			inst->path = skynet_malloc(strlen("../log")+1);
+			strcpy(inst->prefix, prefix);
+			strcpy(inst->path, "../log");
+			checkfilestate(inst);
 		} else {
 			printf("Invalid logger parm %s",parm);
 		}

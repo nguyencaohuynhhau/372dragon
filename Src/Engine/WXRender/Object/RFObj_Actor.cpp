@@ -1,4 +1,4 @@
-﻿#include "StdAfx.h"
+#include "StdAfx.h"
 
 #include "RFObj_Actor.h"
 
@@ -10,6 +10,7 @@
 #include <OgreSceneNode.h>
 #include <OgreSceneManager.h>
 #include <OgreLogmanager.h>
+#include <OgreException.h>
 
 #include "Core/WXSystem.h"
 #include "Core/WXObjectFactoryManager.h"
@@ -134,7 +135,18 @@ VOID CRFObj_Actor::Actor_SetFile(LPCTSTR szActorFile)
 		return;
 	}
 
-	m_pWXObject->setProperty(FOBJ_ACTOR_FILE, WX::String(szActorFile));
+	try
+	{
+		m_pWXObject->setProperty(FOBJ_ACTOR_FILE, WX::String(szActorFile));
+	}
+	catch (const Ogre::Exception& e)
+	{
+		TDU_Log("CYS-CRASHANIM: setProperty '%s' failed: %s", szActorFile ? szActorFile : "", e.getFullDescription().c_str());
+	}
+	catch (...)
+	{
+		TDU_Log("CYS-CRASHANIM: setProperty '%s' unknown exception", szActorFile ? szActorFile : "");
+	}
 
 //	AxTrace(0, 0, "%s", szActorFile);
 	//检测资源Load情况

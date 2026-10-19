@@ -1,4 +1,4 @@
-﻿
+
 #ifndef __GAMEDEFINE2_H__
 #define __GAMEDEFINE2_H__
 
@@ -21,6 +21,8 @@ enum MENPAI_ATTRIBUTE
 };
 
 // 关系
+#ifndef _ENUM_RELATION_DEFINED
+#define _ENUM_RELATION_DEFINED
 enum ENUM_RELATION
 {
 	RELATION_INVALID	= -1,
@@ -29,6 +31,7 @@ enum ENUM_RELATION
 
 	RELATION_NUMBERS
 };
+#endif
 
 enum ENUM_NPC_AI_ATTR
 {

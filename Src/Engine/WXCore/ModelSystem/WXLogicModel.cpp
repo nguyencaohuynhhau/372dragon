@@ -1,4 +1,4 @@
-﻿/********************************************************************
+/********************************************************************
 filename:   WXLogicModel.cpp
 
 purpose:    LogicModel类是用于替换原来DObject的，其主要作用是渲染层与
@@ -2309,11 +2309,11 @@ namespace WX	{
 		}
 		catch ( Ogre::Exception& e)
 		{
-			if (e.getNumber() ==  Ogre::Exception::ERR_RT_ASSERTION_FAILED)
-			{
-				 Ogre::LogManager::getSingleton().logMessage("Animation : " + skillName + '\n' + "_getAnimationState Failed!");
-			}
-
+			Ogre::LogManager::getSingleton().logMessage("Animation : " + skillName + "\n" + e.getFullDescription());
+		}
+		catch (...)
+		{
+			Ogre::LogManager::getSingleton().logMessage("Animation : " + skillName + " failed with unknown exception");
 		}
 		setAnimationLoop(loop);
 	}

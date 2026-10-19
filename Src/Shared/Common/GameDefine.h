@@ -1,4 +1,4 @@
-﻿
+
 #ifndef __GAMEDEFINE_H__
 #define __GAMEDEFINE_H__
 
@@ -584,11 +584,21 @@ enum
 
 #define MAX_FILE_PATH  260
 
+#ifndef MAKE_COLOR
 #define MAKE_COLOR(r,g,b,a)		(((r&0xFF)<<24)|((g&0xFF)<<16)|((b&0xFF)<<8)|(a&0xFF))
+#endif
+#ifndef COLOR_R
 #define COLOR_R(color)			((color>>24)&0x000000FF)
+#endif
+#ifndef COLOR_G
 #define COLOR_G(color)			((color>>16)&0x000000FF)
+#endif
+#ifndef COLOR_B
 #define COLOR_B(color)			((color>>8)&0x000000FF)
+#endif
+#ifndef COLOR_A
 #define COLOR_A(color)			((color)&0x000000FF)
+#endif
 
 #define GETHIGH(x) (x>>16)
 #define GETLOW(x)  ((x<<16)>>16)

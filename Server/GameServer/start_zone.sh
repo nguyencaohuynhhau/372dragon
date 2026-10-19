@@ -26,10 +26,12 @@ error()   { echo -e "${RED}[ERR]${NC}  $*"; }
 title()   { echo -e "${CYAN}===== $* =====${NC}"; }
 
 # ---------- 路径与环境配置 ----------
-GAME_DIR=/home/ubuntu/cys-test-20260913/GameServer
-script_root=/home/ubuntu/cys-test-20260913/Game_2/Script
-scene_config=/home/ubuntu/cys-test-20260913/Game_2/Scene
-config_path=/home/ubuntu/cys-test-20260913/configs/%s
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SERVER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+GAME_DIR="$SCRIPT_DIR"
+script_root="$SERVER_DIR/Game_2/Script"
+scene_config="$SERVER_DIR/Game_2/Scene"
+config_path="$SERVER_DIR/configs/%s"
 env=publish_yu
 
 # ---------- 已配置的区列表（区号, 对应 processid = 区号+1）----------

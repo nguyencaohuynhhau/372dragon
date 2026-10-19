@@ -17,10 +17,12 @@ success() { echo -e "${GREEN}[OK]${NC}   $*"; }
 error()   { echo -e "${RED}[ERR]${NC}  $*"; }
 
 # ---------- 路径与环境配置 ----------
-GAME_DIR=/home/ubuntu/cys-test-20260913/GameServer
-script_root=/home/ubuntu/cys-test-20260913/Game_2/Script
-scene_config=/home/ubuntu/cys-test-20260913/Game_2/Scene
-config_path=/home/ubuntu/cys-test-20260913/configs/%s
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SERVER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+GAME_DIR="$SCRIPT_DIR"
+script_root="$SERVER_DIR/Game_2/Script"
+scene_config="$SERVER_DIR/Game_2/Scene"
+config_path="$SERVER_DIR/configs/%s"
 env=publish_yu
 
 # ---------- 进入工作目录 ----------
@@ -31,7 +33,13 @@ cd "$GAME_DIR"
 # ============================================================
 do_build() {
     info "开始编译 framework ..."
-    cd framework && make linux && cd ..
+    cd framework
+    if [ -f "3rd/jemalloc/lib/libjemalloc_pic.a" ]; then
+        make linux
+    else
+        make linux_nojemalloc
+    fi
+    cd ..
     info "开始编译主体 ..."
     make
     success "编译完成"
@@ -209,11 +217,14 @@ cmd_status() {
         fi
     }
 
-    check_port "Manager (集群)"    6008
-    check_port "Game    (集群)"    6002
-    check_port "Tool    (集群)"    6006
-    check_port "Tool    (Web)"     8000
-    check_port "DataCenter(集群)"  6009
+    check_port "Manager (集群)"    18888
+    check_port "DataCenter(集群)"  12531
+    check_port "Tool    (集群)"    12532
+    check_port "Tool    (Web)"     18000
+    check_port "Game    (Login)"   15733
+    check_port "Game    (Gateway)" 15734
+    check_port "MongoDB (Database)" 27018
+    check_port "Mosquitto (MQTT)"  1884
 
     info "===== 状态检查完毕 ====="
 }

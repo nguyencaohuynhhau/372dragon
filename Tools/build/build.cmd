@@ -37,10 +37,20 @@ exit /b 2
 :cfg_ok
 set "COMPS=%~4"
 set "TARGET=%~5"
-set "VS=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+rem Detect Visual Studio 2022 installation
+set "VS="
+if exist "C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvarsall.bat" set "VS=C:\Program Files\Microsoft Visual Studio\2022\Professional"
+if "%VS%"=="" if exist "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" set "VS=C:\Program Files\Microsoft Visual Studio\2022\Community"
+if "%VS%"=="" if exist "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" set "VS=C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+if "%VS%"=="" if exist "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" set "VS=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools"
+if "%VS%"=="" (
+    echo [build.cmd] Khong tim thay Visual Studio 2022
+    exit /b 1
+)
 call "%VS%\VC\Auxiliary\Build\vcvarsall.bat" %ARCH% >nul
 if errorlevel 1 exit /b 1
 set "CMAKE=%VS%\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
+if not exist "%CMAKE%" set "CMAKE=cmake"
 set "NINJA=%VS%\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe"
 set "ROOT=%~dp0..\.."
 set "BLD=%ROOT%\Build\cmake\%NAME%"

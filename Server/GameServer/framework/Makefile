@@ -19,8 +19,8 @@ $(LUA_STATICLIB) :
 
 # https : turn on TLS_MODULE to add https support
 TLS_MODULE=ltls
-TLS_LIB=/usr/lib64/openssl
-TLS_INC=/usr/include/openssl
+TLS_LIB ?= /usr/lib/x86_64-linux-gnu
+TLS_INC ?= /usr/include/openssl
 
 ## cipher: use openssl cipher 
 CIPHER_MODULE = lcipher

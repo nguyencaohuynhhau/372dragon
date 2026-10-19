@@ -1,4 +1,4 @@
-﻿/********************************************************************
+/********************************************************************
 filename:   WXLogicModelObject.cpp
 
 purpose:    把LogicModelObject封装到WXObject系列中
@@ -15,6 +15,9 @@ purpose:    把LogicModelObject封装到WXObject系列中
 
 #include "ModelSystem/WXLogicModelManager.h"
 #include "ModelSystem/WXLogicModel.h"
+
+#include <OgreException.h>
+#include <OgreLogManager.h>
 
 namespace WX {
 
@@ -165,8 +168,22 @@ namespace WX {
         assert(!mLogicModel);
         assert(mProxy && !mLogicModelName.empty());
 
-        mLogicModel = LogicModelManager::getSingleton().createLogicModel(mLogicModelName);
-        mLogicModel->setUserObject(mProxy);
+        try
+        {
+            mLogicModel = LogicModelManager::getSingleton().createLogicModel(mLogicModelName);
+            if (mLogicModel)
+                mLogicModel->setUserObject(mProxy);
+        }
+        catch (const Ogre::Exception& e)
+        {
+            Ogre::LogManager::getSingleton().logMessage("LogicModelObject::_createLogicModel failed for '" + mLogicModelName + "': " + e.getFullDescription());
+            mLogicModel = NULL;
+        }
+        catch (...)
+        {
+            Ogre::LogManager::getSingleton().logMessage("LogicModelObject::_createLogicModel unknown failure for '" + mLogicModelName + "'");
+            mLogicModel = NULL;
+        }
     }
     //-----------------------------------------------------------------------
     void LogicModelObject::_destroyLogicModel(void)

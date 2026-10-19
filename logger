@@ -1,0 +1,37 @@
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-251-	sa.sa_handler = &handle_hup;
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-252-	sa.sa_flags = SA_RESTART;
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-253-	sigfillset(&sa.sa_mask);
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-254-	sigaction(SIGHUP, &sa, NULL);
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-255-
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c:256:	if (config->daemon) {
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c:257:		if (daemon_init(config->daemon)) {
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-258-			exit(1);
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-259-		}
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-260-	}
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c:261:	skynet_harbor_init(config->harbor);
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c:262:	skynet_handle_init(config->harbor);
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-263-	skynet_mq_init();
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c:264:	skynet_module_init(config->module_path);
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-265-	skynet_timer_init();
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-266-	skynet_socket_init();
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c:267:	skynet_profile_enable(config->profile);
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-268-
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c:269:	struct skynet_context *ctx = skynet_context_new(config->logservice, config->logger);
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-270-	if (ctx == NULL) {
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c:271:		fprintf(stderr, "Can't launch %s service\n", config->logservice);
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-272-		exit(1);
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-273-	}
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-274-
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-275-	skynet_handle_namehandle(skynet_context_handle(ctx), "logger");
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-276-
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c:277:	bootstrap(ctx, config->bootstrap);
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-278-
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c:279:	start(config->thread);
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-280-
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-281-	// harbor_exit may call socket send, so it should exit before socket_free
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-282-	skynet_harbor_exit();
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-283-	skynet_socket_free();
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c:284:	if (config->daemon) {
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c:285:		daemon_exit(config->daemon);
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-286-	}
+/home/havvng/372dragon/Server/GameServer/framework/skynet-src/skynet_start.c-287-}
