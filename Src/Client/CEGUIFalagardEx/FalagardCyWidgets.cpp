@@ -253,6 +253,13 @@ namespace CEGUI
         StringProp<FalagardCyItemButton> s_itemHover("HoverSection",
             "CY: name of the imagery section drawn while the mouse is over the item.", "",
             &FalagardCyItemButton::setHoverSection, &FalagardCyItemButton::getHoverSection);
+        // CY layouts/Lua spell the hover property per class (SelectServer.lua); both alias HoverSection.
+        StringProp<FalagardCyItemButton> s_itemCatalogHover("AchievementWindowCatalogButtonHover",
+            "CY: alias of HoverSection.", "",
+            &FalagardCyItemButton::setHoverSection, &FalagardCyItemButton::getHoverSection);
+        StringProp<FalagardCyItemButton> s_itemTextHover("AchievementWindowButtonTextHover",
+            "CY: alias of HoverSection.", "",
+            &FalagardCyItemButton::setHoverSection, &FalagardCyItemButton::getHoverSection);
         BoolProp<FalagardCyItemButton> s_itemSelected("ItemSelected",
             "CY: True - the item is the selected one (SetButtonSelected).", "False",
             &FalagardCyItemButton::setItemSelected, &FalagardCyItemButton::isItemSelected);
@@ -276,6 +283,8 @@ namespace CEGUI
     {
         CEGUI_START_ADD_STATICPROPERTY(FalagardCyItemButton)
             CYS_ADD_PROP(&s_itemHover);
+            CYS_ADD_PROP(&s_itemCatalogHover);
+            CYS_ADD_PROP(&s_itemTextHover);
             CYS_ADD_PROP(&s_itemSelected);
         CEGUI_END_ADD_STATICPROPERTY
         addEvent(EventElementButton1Click);
@@ -317,6 +326,19 @@ namespace CEGUI
         requestRedraw();
     }
 
+    void FalagardCyItemButton::drawSelf(float z)
+    {
+        // FalagardButton draws only Normal/Hover/Pushed/Disabled and silently draws nothing for the CY looks
+        // (EnabledBackground/DisabledBackground only, FalButton.cpp doButtonRender), so those go through
+        // Window::drawSelf -> populateRenderCache. Looks with "Normal" keep the old path unchanged.
+        WidgetLookManager& looks = WidgetLookManager::getSingleton();
+        if (d_needsRedraw && !d_lookName.empty() && looks.isWidgetLookAvailable(d_lookName) &&
+            !looks.getWidgetLook(d_lookName).isStateImageryPresent("Normal"))
+            Window::drawSelf(z);
+        else
+            FalagardButton::drawSelf(z);
+    }
+
     void FalagardCyItemButton::populateRenderCache()
     {
         if (d_lookName.empty()) return;
@@ -326,10 +348,22 @@ namespace CEGUI
         else if (isPushed()) state = "Pushed";
         else if (d_selected && wlf.isStateImageryPresent("Selected")) state = "Selected";
         else if (isHovering() && wlf.isStateImageryPresent("Hover")) state = "Hover";
+        const char* background = isDisabled() ? "DisabledBackground" : "EnabledBackground";
         if (wlf.isStateImageryPresent(state)) wlf.getStateImagery(state).render(*this);
-        else if (wlf.isStateImageryPresent("Normal")) wlf.getStateImagery("Normal").render(*this);
-        if (!d_hoverSection.empty() && isHovering() && wlf.isStateImageryPresent(d_hoverSection))
+        else if (!isDisabled() && wlf.isStateImageryPresent("Normal")) wlf.getStateImagery("Normal").render(*this);
+        else if (wlf.isStateImageryPresent(background)) wlf.getStateImagery(background).render(*this);
+        if (d_hoverSection.empty() || !isHovering() || isDisabled()) return;
+        if (wlf.isStateImageryPresent(d_hoverSection))
+        {
             wlf.getStateImagery(d_hoverSection).render(*this);
+            return;
+        }
+        // CY hover targets an ImagerySection; 0.4.1 has no isImagerySectionPresent, so a missing name is ignored.
+        try
+        {
+            wlf.getImagerySection(d_hoverSection).render(*this, -0.0000001f); // z of layer priority 1: above the background
+        }
+        catch (UnknownObjectException&) {}
     }
 
     // ==================================================================== list variants

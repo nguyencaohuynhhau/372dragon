@@ -13,6 +13,46 @@ sys.path.insert(0, str(ROOT / 'Tools/ui'))
 import create_role_layout
 
 
+def empty_slot_hover_check(dll):
+    """CY SelectRole.lua must survive GetRoleInfo for a slot with no character.
+
+    The mock pins the contract native GetRoleInfo returns for empty slots: ("", 0, 0, 0, "").
+    """
+    vm = Lua(dll)
+    try:
+        vm.run(MOCK)
+        vm.run((ROOT / 'Assets/CanonicalCY/Data/InterfaceFolder/SelectRole/SelectRole.lua').read_bytes())
+        vm.run('''
+SelectRole_Info=window()
+SelectRole_Info.SetText=function(self,value) self.text=value end
+local created=0
+SelectRole_CreateRole=function() created=created+1 end
+roleCount=2
+function GameProduceLogin:GetRoleInfo(index)
+    if index>=roleCount then return '',0,0,0,'' end
+    return 'Role'..index,1,10,0,'img'
+end
+local ok,err=pcall(SelectRole_MouseEnterCharArea,2)
+assert(ok,err)
+assert(SelectRole_Info.text=='#{DLJM_XML_5}')
+ok,err=pcall(SelectRole_DoubleClicked,2)
+assert(ok,err)
+assert(created==1)
+''')
+    finally:
+        vm.close()
+    return 'empty slot hover and double click use the empty-slot tuple'
+
+
+def test_empty_slot_hover():
+    dlls = [ROOT / 'Build/cmake' / d / 'bin/LuaPlus.dll' for d in ('ci-x64', 'public-x64')]
+    dll = next((d for d in dlls if d.exists()), None)
+    if dll is None:
+        import pytest
+        pytest.skip('LuaPlus.dll not built')
+    empty_slot_hover_check(dll)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out', required=True)
@@ -111,6 +151,7 @@ assert(not ok and calls.selected==before)
 ''')
     finally:
         vm.close()
+    checks.append(empty_slot_hover_check(dll))
     result = {'passed': len(checks), 'failed': 0, 'checks': checks,
               'lua_dll_sha256': profile.digest(dll.read_bytes()),
               'controller_sha256': profile.digest(source.read_bytes()),

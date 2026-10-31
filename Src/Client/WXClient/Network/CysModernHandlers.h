@@ -16,7 +16,7 @@ namespace CysModernHandlers
     bool IsWorldPacket(uint16_t id);
     void OnConnected(uint32_t generation);
     void OnTransfer(const pg::GCRetChangeScene& accepted);
-    void OnSessionClosed(bool quitComplete);
+    void OnSessionClosed(bool quitComplete, bool returnToLogin = false);
     // Returns true when a ported handler consumed the packet. procedureChanged asks
     // the caller to stop the batch so the procedure switch happens before more packets.
     bool Dispatch(const pg::Packet& packet, uint32_t generation, bool& procedureChanged);

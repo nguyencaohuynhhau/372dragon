@@ -3490,7 +3490,6 @@ namespace LuaApiGen
         int LAG_CY_3384(LuaPlus::LuaState* s) { return Stub(s, "_G", "RefreshKvkShowOffMsg", "o"); } // calls 1 in 1 file(s), rets by name
         int LAG_CY_3385(LuaPlus::LuaState* s) { return Stub(s, "_G", "RefreshShowOffMsg", "o"); } // calls 1 in 1 file(s), rets by name
         int LAG_CY_3386(LuaPlus::LuaState* s) { return Stub(s, "_G", "ResetNewCurrentCampainList", "o"); } // calls 1 in 1 file(s), rets by name
-        int LAG_CY_3387(LuaPlus::LuaState* s) { return Stub(s, "_G", "ReturnServerLogin", "o"); } // calls 1 in 1 file(s), rets by name
         int LAG_CY_3388(LuaPlus::LuaState* s) { return Stub(s, "_G", "RevertAcceCustom", "o"); } // calls 1 in 1 file(s), rets by name
         int LAG_CY_3389(LuaPlus::LuaState* s) { return Stub(s, "_G", "RunCmdLine", "o"); } // calls 1 in 1 file(s), rets by name
         int LAG_CY_3390(LuaPlus::LuaState* s) { return Stub(s, "_G", "RunXunYou", "o"); } // calls 2 in 2 file(s), rets by name
@@ -7023,7 +7022,6 @@ namespace LuaApiGen
         { "_G", "RefreshKvkShowOffMsg", &LAG_CY_3384 },
         { "_G", "RefreshShowOffMsg", &LAG_CY_3385 },
         { "_G", "ResetNewCurrentCampainList", &LAG_CY_3386 },
-        { "_G", "ReturnServerLogin", &LAG_CY_3387 },
         { "_G", "RevertAcceCustom", &LAG_CY_3388 },
         { "_G", "RunCmdLine", &LAG_CY_3389 },
         { "_G", "RunXunYou", &LAG_CY_3390 },

@@ -128,7 +128,8 @@ namespace CEGUI
         WindowManager& wm = WindowManager::getSingleton();
         char buf[48];
         String name;
-        do { std::sprintf(buf, "__auto_%s_%d__", "element", d_nextIndex++); name = getName() + buf; } while (wm.isWindowPresent(name));
+        // Lua parses tonumber(suffix after "_auto_element"), so the name must end in digits.
+        do { std::sprintf(buf, "__auto_element%d", d_nextIndex++); name = getName() + buf; } while (wm.isWindowPresent(name));
         Window* w = 0;
         try
         {

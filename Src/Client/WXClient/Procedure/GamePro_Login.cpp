@@ -228,8 +228,32 @@ VOID CGamePro_Login::LoginForChangeScene(VOID)
 	CGameProcedure::s_pVariableSystem->SetAs_Int("Login_Mode", (INT)LOGIN_CHANGE_SCENE);
 }
 
+// CYS-RELOGIN: CysModernHandlers::OnSessionClosed after the quit_complete of ReturnServerLogin. Only switches the
+// procedure here (inside the network pump); Init does the teardown after CGamePro_Main::Release.
+void CGamePro_Login::ReturnFromWorld()
+{
+    m_cysReturnFromWorld = true;
+    SetActiveProc(s_pProcLogIn);
+    SetStatus(LOGIN_INPUT_ACCOUNT);
+}
+
 VOID CGamePro_Login::Init(VOID)
 {
+    if (m_cysReturnFromWorld)
+    {
+        m_cysReturnFromWorld = false;
+        // Same teardown as a scene change (CWorldManager::EnterScene): leave the scene and its objects, so the next
+        // world entry loads the scene again instead of hitting the "same scene" early return.
+        CWorldManager::GetMe()->Release();
+        typedef int (__cdecl *HideAllFn)();
+        HMODULE ui = GetModuleHandleA("UI_CEGUI.dll");
+        HideAllFn hideAll = ui ? reinterpret_cast<HideAllFn>(GetProcAddress(ui, "CysUiHideAllWindows")) : NULL;
+        TDU_Log("CYS relogin: visible_game_windows=%d", hideAll ? hideAll() : -1);
+        s_pEventSystem->PushEvent(GE_GAMELOGIN_OPEN_COUNT_INPUT);
+        // Init's own Tick runs before ProcessGameEvent, so the prefill waits for the second Tick. The password is never
+        // kept (CheckAccount wipes it).
+        m_cysPrefillTicks = m_strUserName.empty() ? 0 : 2;
+    }
 	//fujia 2008.1.16
 	/*if (CGameProcedure::s_pVariableSystem->GetAs_Int("View_FullScreen"))
 	{
@@ -297,6 +321,14 @@ VOID CGamePro_Login::SelectOldServer()
 VOID CGamePro_Login::Tick(VOID)
 {
 	CGameProcedure::Tick();
+    if (m_cysPrefillTicks && --m_cysPrefillTicks == 0)
+    {
+        // CYS-RELOGIN: the frame after Init, so the LogOn script has already cleared LogOn_ID on OPEN_COUNT_INPUT.
+        typedef int (__cdecl *SetEditFn)(const char*, const char*);
+        HMODULE ui = GetModuleHandleA("UI_CEGUI.dll");
+        SetEditFn setEdit = ui ? reinterpret_cast<SetEditFn>(GetProcAddress(ui, "CysUiSetEditTextUtf8")) : NULL;
+        TDU_Log("CYS relogin: account prefilled=%d", setEdit ? setEdit("LogOn_ID", m_strUserName.c_str()) : -1);
+    }
 	if (m_modernLogin) return; // Pumped once by NetManager across login/create/select.
 
 	switch(m_Status)

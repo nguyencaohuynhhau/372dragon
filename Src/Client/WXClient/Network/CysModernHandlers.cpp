@@ -37,6 +37,7 @@ bool CysSelfEquipData::Enabled()
 #include "..\Procedure\Gamepro_ChangeScene.h"
 #include "..\Procedure\GamePro_Enter.h"
 #include "..\Procedure\GamePro_Main.h"
+#include "..\Procedure\GamePro_Login.h" // CYS-RELOGIN: ReturnFromWorld
 #include "..\Procedure\CysWorldTime.h" // CYS-SKY
 #include "..\Object\ObjectManager.h"
 #include "..\Object\ObjectCommandDef.h"
@@ -1268,13 +1269,21 @@ void CysModernHandlers::OnTransfer(const pg::GCRetChangeScene& accepted)
     CGameProcedure::s_pEventSystem->PushEvent(GE_ON_SERVER_TRANS);
 }
 
-void CysModernHandlers::OnSessionClosed(bool quitComplete)
+void CysModernHandlers::OnSessionClosed(bool quitComplete, bool returnToLogin)
 {
     CysPvpNet::Reset();
     CysInspectNet::Reset();
     g_equipmentTooltip.Clear();
     CysEquipmentSkills::Reset();
     g_selfEquipData.Clear();
+    if (returnToLogin)
+    {
+        // CYS-RELOGIN: a clean quit asked by ReturnServerLogin; no NET_CLOSE box, back to the account screen.
+        CGameProcedure::s_pEventSystem->PushEvent(GE_PLAYER_LEAVE_WORLD, "");
+        CGameProcedure::s_pProcLogIn->ReturnFromWorld();
+        return;
+    }
+    TDU_Log("CYS world: GE_NET_CLOSE pushed quit_complete=%d", quitComplete ? 1 : 0);
     if (quitComplete)
         CGameProcedure::s_pEventSystem->PushEvent(GE_NET_CLOSE, "The game session has ended.");
     else
@@ -1397,7 +1406,7 @@ bool CysModernHandlers::WorldReady() { return false; }
 bool CysModernHandlers::IsWorldPacket(uint16_t) { return false; }
 void CysModernHandlers::OnConnected(uint32_t) {}
 void CysModernHandlers::OnTransfer(const pg::GCRetChangeScene&) {}
-void CysModernHandlers::OnSessionClosed(bool) {}
+void CysModernHandlers::OnSessionClosed(bool, bool) {}
 bool CysModernHandlers::Dispatch(const pg::Packet&, uint32_t, bool& procedureChanged) { procedureChanged = false; return false; }
 unsigned int CysModernHandlers::InvalidPositions() { return 0; }
 unsigned int CysModernHandlers::IgnoredSelfDeletes() { return 0; }

@@ -31,6 +31,8 @@ namespace CysModernGame
     void LogStatsNow();
     // The client could not load the scene the server placed it in: leave cleanly.
     void OnEnterSceneFailed();
+    // CYS-RELOGIN: in world, CGAskQuit with the return-to-login flag; its quit_complete reopens the account screen.
+    bool RequestReturnToLogin();
     // CNetManager::Release: CGAskQuit in world, bounded wait for the server close.
     void Shutdown(unsigned int timeoutMs);
     // CYS-CORE: nearest live monster of the session's WorldModel (server object id; 0 = none).

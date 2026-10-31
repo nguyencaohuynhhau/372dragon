@@ -35,6 +35,7 @@
 #include "FalagardAchievementWindow.h"
 #include "FalagardDragDropTarget.h"
 #include "FalagardSuperBarButton.h"
+#include "FalagardCyWidgets.h"
 #include "FalSuperTooltip.h"
 #include "CysStoredProperties.h"
 #include "CEGUIScriptModule.h"
@@ -47,6 +48,8 @@
 #include "falagard/CEGUIFalWidgetLookManager.h"
 #include <windows.h>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <functional>
 #include <stdexcept>
@@ -76,6 +79,8 @@ struct ClickableTestButton : FalagardAnimateButton {
     ClickableTestButton(const String& t,const String& n) : FalagardAnimateButton(t,n) {}
     using Window::onMouseClicked;
 };
+// Pointer to the protected hover flag, so a real CY item button can be put in hover state without a GUI sheet.
+struct HoverAccess : ButtonBase { static bool ButtonBase::* flag() { return &HoverAccess::d_hovering; } };
 struct ClickableTestFactory : WindowFactory {
     ClickableTestFactory() : WindowFactory("Falagard/AnimateButton") {}
     Window* createWindow(const String& n) override { return new ClickableTestButton(d_type,n); }
@@ -858,7 +863,21 @@ int main(int argc,char** argv) {
         Window* r1=ach->AddChildElement("Row");Window* r2=ach->AddChildElement("Row");
         require(r1 && r2 && ach->getItemCount()==2 && r2->getAbsoluteYPosition()==20 && r1->getParent()==ach->getContainer(),"elements not stacked");
         require(ach->AddChildElement("Nope")==0,"unknown key must return null");
-        ach->ClearAllElement();require(ach->getItemCount()==0 && !wm.isWindowPresent("Ach__auto_element_0__"),"clear failed");
+        ach->ClearAllElement();require(ach->getItemCount()==0 && !wm.isWindowPresent("Ach__auto_element0"),"clear failed");
+    });
+    test("AchievementWindow element names end in digits and restart after clear",[&]{
+        ach->setProperty("ChildItem","key:Row name:DefaultWindow");
+        for(int i=0;i<3;++i){
+            Window* w=ach->AddChildElement("Row");require(w!=0,"add failed");
+            char want[32];std::sprintf(want,"Ach__auto_element%d",i);
+            require(w->getName()==want && wm.isWindowPresent(want),"element name not CY-compatible");
+            const char* tag=std::strstr(w->getName().c_str(),"_auto_element");require(tag!=0,"tag missing");
+            char* end=0;const long n=std::strtol(tag+13,&end,10);
+            require(end!=tag+13 && *end==0 && n==i,"suffix not an integer");
+        }
+        ach->ClearAllElement();
+        Window* w=ach->AddChildElement("Row");require(w && w->getName()=="Ach__auto_element0","index not reset after clear");
+        ach->ClearAllElement();
     });
     auto* tripper=static_cast<FalagardTripperTooltip*>(wm.createWindow("Falagard/TripperTooltip","Tripper"));tripper->setLookNFeel("Falagard/TripperTooltip","HudTooltip");
     test("TripperTooltip keeps one text line per request id",[&]{
@@ -883,6 +902,43 @@ int main(int argc,char** argv) {
         info->setProperty("ChildItem","key:Child name:TLBB_ChatBoard");info->setProperty("ChildItem","key:Other name:X");
         require(info->getProperty("ChildItem")=="key:Child name:TLBB_ChatBoard\nkey:Other name:X","repeated stored property not accumulated");
         bool threw=false;try{simple->setProperty("NoSuchPropertyXYZ","1");}catch(const UnknownObjectException&){threw=true;}require(threw,"unknown properties must still throw");
+    });
+    // CY item buttons: looks with only EnabledBackground/DisabledBackground and an ImagerySection hover (SelectServer).
+    fm.addFactory(new FalagardActionButtonItemFactory);
+    fm.addFactory(new FalagardAchievementWindowCatalogButtonFactory);
+    fm.addFactory(new FalagardAchievementWindowTextButtonFactory);
+    std::ofstream("cyitem.looknfeel",std::ios::binary) << R"xml(<Falagard><WidgetLook name="CyBackgroundLook">
+<ImagerySection name="Bg"><ImageryComponent><Area><Dim type="LeftEdge"><AbsoluteDim value="0"/></Dim><Dim type="TopEdge"><AbsoluteDim value="0"/></Dim><Dim type="Width"><AbsoluteDim value="16"/></Dim><Dim type="Height"><AbsoluteDim value="16"/></Dim></Area><Image imageset="Fixture" image="First"/></ImageryComponent></ImagerySection>
+<ImagerySection name="BgOff"><ImageryComponent><Area><Dim type="LeftEdge"><AbsoluteDim value="16"/></Dim><Dim type="TopEdge"><AbsoluteDim value="0"/></Dim><Dim type="Width"><AbsoluteDim value="16"/></Dim><Dim type="Height"><AbsoluteDim value="16"/></Dim></Area><Image imageset="Fixture" image="Second"/></ImageryComponent></ImagerySection>
+<ImagerySection name="HoverSec"><ImageryComponent><Area><Dim type="LeftEdge"><AbsoluteDim value="32"/></Dim><Dim type="TopEdge"><AbsoluteDim value="0"/></Dim><Dim type="Width"><AbsoluteDim value="16"/></Dim><Dim type="Height"><AbsoluteDim value="16"/></Dim></Area><Image imageset="Fixture" image="First"/></ImageryComponent></ImagerySection>
+<StateImagery name="EnabledBackground"><Layer><Section section="Bg"/></Layer></StateImagery><StateImagery name="DisabledBackground"><Layer><Section section="BgOff"/></Layer></StateImagery>
+</WidgetLook><WidgetLook name="CyNormalLook">
+<ImagerySection name="N"><ImageryComponent><Area><Dim type="LeftEdge"><AbsoluteDim value="0"/></Dim><Dim type="TopEdge"><AbsoluteDim value="0"/></Dim><Dim type="Width"><AbsoluteDim value="16"/></Dim><Dim type="Height"><AbsoluteDim value="16"/></Dim></Area><Image imageset="Fixture" image="First"/></ImageryComponent></ImagerySection>
+<ImagerySection name="S"><ImageryComponent><Area><Dim type="LeftEdge"><AbsoluteDim value="16"/></Dim><Dim type="TopEdge"><AbsoluteDim value="0"/></Dim><Dim type="Width"><AbsoluteDim value="16"/></Dim><Dim type="Height"><AbsoluteDim value="16"/></Dim></Area><Image imageset="Fixture" image="Second"/></ImageryComponent></ImagerySection>
+<StateImagery name="Normal"><Layer><Section section="N"/></Layer></StateImagery><StateImagery name="Selected"><Layer><Section section="S"/></Layer></StateImagery>
+</WidgetLook></Falagard>)xml";
+    WidgetLookManager::getSingleton().parseLookNFeelSpecification("cyitem.looknfeel");
+    auto setHover=[&](Window* w,bool on){static_cast<ButtonBase*>(w)->*HoverAccess::flag()=on;w->requestRedraw();};
+    for (const char* type : {"Falagard/AchievementWindowCatalogButton","Falagard/AchievementWindowTextButton"}) {
+        const bool catalog=std::strstr(type,"Catalog")!=nullptr;
+        const char* hoverProperty=catalog?"AchievementWindowCatalogButtonHover":"AchievementWindowButtonTextHover";
+        test(catalog?"CY catalog button renders background-only look and its CY hover section":"CY text button renders background-only look and its CY hover section",[&]{
+            Window* w=wm.createWindow(type,catalog?"CyCatalogItem":"CyTextItem");
+            w->setLookNFeel(type,"CyBackgroundLook");w->setProperty("AbsoluteSize","w:64 h:16");
+            w->setProperty(hoverProperty,"HoverSec");require(w->getProperty("HoverSection")=="HoverSec","CY hover alias not shared with HoverSection");
+            draw(w);require(renderer.quads.size()==1 && renderer.quads[0].d_left==0,"enabled background not rendered");
+            setHover(w,true);draw(w);require(renderer.quads.size()==2 && (renderer.quads[0].d_left==32 || renderer.quads[1].d_left==32),"hover imagery section not rendered");
+            setHover(w,false);w->setEnabled(false);draw(w);require(renderer.quads.size()==1 && renderer.quads[0].d_left==16,"disabled background not rendered");
+            w->setEnabled(true);
+        });
+    }
+    // Passes before and after the fix by design: a look with "Normal" must stay on FalagardButton::drawSelf,
+    // which ignores ItemSelected; populateRenderCache would draw "Selected" at left 16 instead.
+    test("CY ActionButtonItem with a Normal look keeps the FalagardButton render path",[&]{
+        Window* w=wm.createWindow("Falagard/ActionButtonItem","CyActionItem");
+        w->setLookNFeel("Falagard/ActionButtonItem","CyNormalLook");w->setProperty("AbsoluteSize","w:64 h:16");
+        w->setProperty("ItemSelected","True");draw(w);
+        require(renderer.quads.size()==1 && renderer.quads[0].d_left==0,"Normal look left the FalagardButton path");
     });
     Window::setClickSoundCallback(nullptr);
     wm.destroyAllWindows();

@@ -94,6 +94,29 @@ extern "C" __declspec(dllexport) int __cdecl CysUiReadImageMetricsUtf8(const cha
 extern "C" __declspec(dllexport) int __cdecl CysUiDumpVisibleWindowsUtf8(char* out, unsigned capacity)
 { return CysUiInputAccess::dumpVisibleWindowsUtf8(out, capacity); }
 
+// CYS-RELOGIN: leaving the world for the account screen hides every managed layout. CloseAllWindow is not enough:
+// it keeps DemiseType 0/6 (the HUD). Returns how many layouts are still shown (0 expected), -1 without a manager.
+extern "C" __declspec(dllexport) int __cdecl CysUiHideAllWindows()
+{
+    if (!g_hMainWnd || GetWindowThreadProcessId(g_hMainWnd, nullptr) != GetCurrentThreadId()) return -1;
+    CUIWindowMng* manager = CUIWindowMng::GetMe();
+    if (!manager) return -1;
+    manager->HideAllWindow();
+    return manager->CountShownWindows();
+}
+
+// CYS-RELOGIN: set an Editbox text (UTF-8); the account prefill after the LogOn script cleared it. 1 = set.
+extern "C" __declspec(dllexport) int __cdecl CysUiSetEditTextUtf8(const char* name, const char* text)
+{
+    if (!name || !text || !g_hMainWnd || GetWindowThreadProcessId(g_hMainWnd, nullptr) != GetCurrentThreadId()) return 0;
+    CEGUI::WindowManager* manager = CEGUI::WindowManager::getSingletonPtr();
+    if (!manager || !manager->isWindowPresent(name)) return 0;
+    CEGUI::Window* window = manager->getWindow(name);
+    if (!window->testClassName("Editbox")) return 0;
+    window->setText(reinterpret_cast<const CEGUI::utf8*>(text));
+    return 1;
+}
+
 static_assert(std::is_same<decltype(&CysUiGetWindowRectUtf8),
     CysUiInputBridge::GetWindowRectUtf8>::value, "Input rectangle bridge mismatch");
 static_assert(std::is_same<decltype(&CysUiGetDisplaySize),

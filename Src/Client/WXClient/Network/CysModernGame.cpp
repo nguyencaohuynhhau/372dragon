@@ -95,6 +95,7 @@ namespace
         std::map<unsigned, unsigned> unhandled; // modern packet id -> count (no ported handler yet)
         unsigned stashDrops = 0, handlerErrors = 0, modelNotes = 0;
         bool stopBatch = false, terminal = false, shuttingDown = false;
+        bool returnToLogin = false; // CYS-RELOGIN: armed by RequestReturnToLogin, read once by the terminal
         DWORD lastStats = 0;
         unsigned short approvedPort = 0;
     };
@@ -204,7 +205,11 @@ namespace
                     event.counters.decodeFailures, event.packetId, event.decodeField,
                     static_cast<unsigned>(event.errorOffset), event.message);
             LogStats("session summary");
-            if (!s.shuttingDown) CysModernHandlers::OnSessionClosed(event.type == GameEventType::QuitComplete);
+            {
+                const bool relogin = s.returnToLogin && event.type == GameEventType::QuitComplete;
+                s.returnToLogin = false;
+                if (!s.shuttingDown) CysModernHandlers::OnSessionClosed(event.type == GameEventType::QuitComplete, relogin);
+            }
             break;
         }
     }
@@ -409,7 +414,7 @@ bool CysModernGame::Start(cys::net::GameTicket&& ticket, unsigned short approved
     if (s.client) return false;
     s.world.reset(); s.stash.clear(); s.dropped.clear(); s.unhandled.clear();
     s.stashDrops = s.handlerErrors = s.modelNotes = 0;
-    s.stopBatch = s.terminal = s.shuttingDown = false;
+    s.stopBatch = s.terminal = s.shuttingDown = s.returnToLogin = false;
     s.lastStats = GetTickCount();
     if (!approvedGamePort) approvedGamePort = ticket.endpoint().port; // CYS: profile game_port=reply
     s.approvedPort = approvedGamePort;
@@ -561,6 +566,15 @@ void CysModernGame::OnEnterSceneFailed()
     if (!s.client->requestQuit()) s.client->cancel();
 }
 
+bool CysModernGame::RequestReturnToLogin()
+{
+    Session& s = S();
+    if (!s.client || s.returnToLogin || s.client->phase() != GamePhase::InWorld || !s.client->requestQuit()) return false;
+    s.returnToLogin = true;
+    TDU_Log("CYS relogin: CGAskQuit sent; waiting for quit_complete");
+    return true;
+}
+
 void CysModernGame::Shutdown(unsigned int timeoutMs)
 {
     Session& s = S();
@@ -659,6 +673,7 @@ void CysModernGame::Send(Packet*) {}
 bool CysModernGame::SendModern(std::unique_ptr<pg::Packet>) { return false; }
 void CysModernGame::LogStatsNow() {}
 void CysModernGame::OnEnterSceneFailed() {}
+bool CysModernGame::RequestReturnToLogin() { return false; }
 void CysModernGame::Shutdown(unsigned int) {}
 
 #endif

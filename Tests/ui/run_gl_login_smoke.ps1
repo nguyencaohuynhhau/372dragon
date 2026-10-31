@@ -5,7 +5,9 @@ param(
     [string]$OutDir = '',
     [string]$CiBin = 'Build\cmake\ci-x64\bin',
     [switch]$ValidateOnly,
-    [ValidateRange(30,300)][int]$Seconds = 60
+    [ValidateRange(30,900)][int]$Seconds = 60,
+    # CYS-RELOGIN: Select only; N times world -> ReturnServerLogin -> account screen -> world.
+    [ValidateRange(0,5)][int]$SwitchCycles = 0
 )
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..')).TrimEnd('\')
@@ -96,9 +98,11 @@ $pairRecords=@(foreach ($relative in $pairs) {
 $font=ChildPath $Stage 'Data/Interface/Schema/NotoSansSC-Regular.ttf'
 if ((Hash $font) -ne (Hash (Join-Path $root 'Assets/Canonical/Data/InterfaceFolder/Schema/NotoSansSC-Regular.ttf'))) { throw 'Staged Noto font differs from Canonical.' }
 $creationProfile=$null
+if ($SwitchCycles -gt 0 -and $CreateMode -ne 'Select') { throw 'SwitchCycles requires -CreateMode Select.' }
 if ($CreateMode -ne 'None') {
     if (($CreateMode -eq 'Preview' -and $Mode -ne 'Offline') -or ($CreateMode -in @('Create','Select') -and $Mode -ne 'WSLTest')) { throw 'Preview requires Offline; Create/Select require WSLTest.' }
     if ($CreateMode -in @('Preview','Create') -and $Seconds -lt 180) { throw 'Creation smoke requires at least 180 seconds for rendered frames and server replies.' }
+    if ($SwitchCycles -gt 0 -and $Seconds -lt 180*(1+$SwitchCycles)) { throw 'Switch cycles require at least 180 seconds per login.' }
     $creationProfile=Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $bin 'create_role_profile.json') | ConvertFrom-Json
     if ($creationProfile.applied -ne $true -or $creationProfile.source -ne '../Tools/DATA NEW/DataCY31-08-26' -or $null -eq $creationProfile.appearance) { throw 'A complete applied DATA CY creation profile is required.' }
     if ($creationProfile.font_codepage -ne 65001 -or $creationProfile.strfilter_rules -ne 0 -or $creationProfile.font_sha256 -ne (Hash $font)) { throw 'Creation font/filter settings differ.' }
@@ -155,6 +159,8 @@ $info.UseShellExecute=$false;$info.CreateNoWindow=$true;$info.WindowStyle=[Diagn
 $info.EnvironmentVariables['CYS_GL_LOGIN_SMOKE']='1'
 $info.EnvironmentVariables.Remove('CYS_CREATE_ROLE_SMOKE')
 if ($CreateMode -ne 'None') { $info.EnvironmentVariables['CYS_CREATE_ROLE_SMOKE']=$CreateMode }
+$info.EnvironmentVariables.Remove('CYS_SWITCH_CYCLES')
+if ($SwitchCycles -gt 0) { $info.EnvironmentVariables['CYS_SWITCH_CYCLES']=[string]$SwitchCycles }
 $info.EnvironmentVariables['TEMP']=$tmp;$info.EnvironmentVariables['TMP']=$tmp
 if ($Mode -eq 'WSLTest') {
     if (-not $info.EnvironmentVariables.ContainsKey('CYS_BOT_PWD')) { throw 'WSLTest requires the bounded test password in the process environment.' }
@@ -193,7 +199,7 @@ try {
         Copy-Item -LiteralPath $shot.FullName -Destination $OutDir
         [ordered]@{name=$shot.Name;sha256=(Hash $shot.FullName);bytes=$shot.Length}
     })
-    $run=[ordered]@{sha=$manifest.sha;mode=$Mode;create_mode=$CreateMode;started=$started.ToString('o');finished=(Get-Date).ToString('o');command=$game+' '+$arguments;cwd=$bin;ci_bin=$CiBin;terminated_after_timeout=$terminated;pid=$null;exit_code=$null;shots=$records;sockets=$connections.ToArray();gl_pairs=$pairRecords;font_sha256=(Hash $font);creation_profile_sha256=$null;launch_error=$launchError}
+    $run=[ordered]@{sha=$manifest.sha;mode=$Mode;create_mode=$CreateMode;switch_cycles=$SwitchCycles;started=$started.ToString('o');finished=(Get-Date).ToString('o');command=$game+' '+$arguments;cwd=$bin;ci_bin=$CiBin;terminated_after_timeout=$terminated;pid=$null;exit_code=$null;shots=$records;sockets=$connections.ToArray();gl_pairs=$pairRecords;font_sha256=(Hash $font);creation_profile_sha256=$null;launch_error=$launchError}
     if ($creationProfile) { $run.creation_profile_sha256=Hash (Join-Path $bin 'create_role_profile.json') }
     if ($processStarted) { $run.pid=$process.Id;$run.exit_code=$process.ExitCode }
     if ($process) { $process.Dispose() }

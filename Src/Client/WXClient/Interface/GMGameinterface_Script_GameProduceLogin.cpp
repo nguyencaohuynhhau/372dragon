@@ -359,7 +359,16 @@ namespace SCRIPT_SANDBOX
         if (CGameProcedure::s_pProcCharSel->UsesModernCharacters())
         {
             const auto* role = CGameProcedure::s_pProcCharSel->GetModernRoleInfo(iRoleIndex);
-            if (!role) TDThrow("GetRoleInfo: invalid character slot.");
+            if (!role)
+            {
+                // Empty slot: Lua treats level 0 as "no character" (hover text / create on double click).
+                state->PushString("");
+                state->PushInteger(0);
+                state->PushInteger(0);
+                state->PushInteger(0);
+                state->PushString("");
+                return 5;
+            }
             state->PushString(role->nickname_text().c_str());
             state->PushInteger(role->menpai);
             state->PushInteger(role->level);

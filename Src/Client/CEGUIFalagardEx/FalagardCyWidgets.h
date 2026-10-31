@@ -130,6 +130,8 @@ namespace CEGUI
         void setHoverSection(const String& section) { d_hoverSection = section; requestRedraw(); }
 
     protected:
+        //! Looks with a "Normal" state keep the FalagardButton path; CY looks (EnabledBackground only) use populateRenderCache.
+        virtual void drawSelf(float z);
         virtual void populateRenderCache();
         virtual bool testClassName_impl(const String& class_name) const
         {

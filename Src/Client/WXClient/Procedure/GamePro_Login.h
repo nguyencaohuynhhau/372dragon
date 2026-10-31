@@ -139,6 +139,8 @@ public:
 	bool IsModernLoginActive() const { return m_modernLogin; } // CYS: socket ownership
     void PumpModernLogin();
     void CancelModernLogin();
+    // CYS-RELOGIN: quit_complete of ReturnServerLogin; back to the account screen with the account prefilled.
+    void ReturnFromWorld();
     bool RequestModernCreatePermission();
     bool SubmitModernCharacter(const cys::net::CreateCharacterRequest& request);
     bool IsModernCreatePending() const { return m_modernCreatePending; }
@@ -297,6 +299,8 @@ protected:
     bool m_modernCreatePending = false;
     bool m_modernCreateSucceeded = false;
     bool m_modernCharLoginPending = false; // CYS: one explicit character login in flight.
+    bool m_cysReturnFromWorld = false; // CYS-RELOGIN: next Init tears the world UI/scene down
+    int m_cysPrefillTicks = 0;          // CYS-RELOGIN: the Tick that brings it to 0 writes m_strUserName into LogOn_ID
 
 	// 与服务器的网络连接状态.
 	PLAYER_LOGIN_STATUS	m_Status;

@@ -79,6 +79,10 @@ class CysGlLoginSmoke
     unsigned sceneShots_ = 0, serverShot_ = 0, accountShot_ = 0;
     DWORD enterFallbackAt_ = 0;       // CYS-CY (cs2-world): World mode, see case 51
     bool enterFallbackDone_ = false;
+    // CYS-RELOGIN: CYS_SWITCH_CYCLES=N (Select mode) repeats world -> ReturnServerLogin -> account -> world N times.
+    // The test password is then kept in switchSecret_ until the last relogin types it, and wiped there.
+    unsigned switchCycles_ = 0, switchDone_ = 0;
+    wchar_t switchSecret_[33] = {};
 #if defined(CYS_HAVE_NETCORE)
     pg::LCRetCharList hairProbeOriginal_;
     bool hairWorldChecked_ = false;
@@ -247,6 +251,7 @@ class CysGlLoginSmoke
         }
     }
 public:
+    ~CysGlLoginSmoke() { SecureZeroMemory(switchSecret_, sizeof(switchSecret_)); }
     explicit CysGlLoginSmoke(bool live) : live_(live)
     {
         char createMode[16] = {};
@@ -285,6 +290,14 @@ public:
         char shots[8] = {};
         if (GetEnvironmentVariableA("CYS_LOGIN_SCENE_SHOTS", shots, sizeof(shots)) && shots[0] >= '1' && shots[0] <= '5' && !shots[1])
             sceneShots_ = static_cast<unsigned>(shots[0] - '0');
+        char cycles[4] = {};
+        if (GetEnvironmentVariableA("CYS_SWITCH_CYCLES", cycles, sizeof(cycles)))
+        {
+            require(cycles[0] >= '1' && cycles[0] <= '5' && !cycles[1], "Relogin smoke: CYS_SWITCH_CYCLES must be 1..5");
+            require(createMode_ == 3 && live_, "Relogin smoke: switch cycles require live Select mode");
+            switchCycles_ = static_cast<unsigned>(cycles[0] - '0');
+            TDU_Log("CYS relogin smoke: begin cycles=%u", switchCycles_);
+        }
         TDU_Log("CYS GL smoke: begin live=%d",live_ ? 1 : 0);
         if (createMode_) TDU_Log("CYS create smoke: begin mode=%s", createMode);
     }
@@ -292,7 +305,7 @@ public:
     {
         const DWORD now = GetTickCount();
         if (step_ == 99 || static_cast<LONG>(now-next_) < 0) return;
-        require(DWORD(now-started_) < (createMode_ == 4 ? worldDeadlineMs_ : createMode_ ? 180000u : 120000u),"GL smoke: integration deadline exceeded");
+        require(DWORD(now-started_) < (createMode_ == 4 ? worldDeadlineMs_ : createMode_ ? 180000u * (1 + switchCycles_) : 120000u),"GL smoke: integration deadline exceeded");
         if (step_ == 0)
         {
             float visible[4] = {};
@@ -438,6 +451,7 @@ public:
             SetEnvironmentVariableW(L"CYS_BOT_PWD",nullptr);
             const bool valid=length>0 && length<=32;
             if (valid) chars(secret);
+            if (valid && switchCycles_) memcpy(switchSecret_, secret, (length + 1) * sizeof(wchar_t));
             SecureZeroMemory(secret,sizeof(secret));
             require(valid,"GL smoke: bounded test password environment is required");
             break;
@@ -689,6 +703,7 @@ public:
 #endif
                 step_=50; next_=now+1000; return;
             }
+            if (createMode_ == 3 && switchDone_ < switchCycles_) { step_=80; next_=now+1000; return; }
             if (createMode_ == 3)
                 TDU_Log("CYS create smoke: PASS Select; WSL existing character loaded and selected");
             else
@@ -937,6 +952,76 @@ public:
             }
             TDU_Log("CYS world smoke: PASS World; live world entered, walked and quit requested");
             step_=99; return;
+        // CYS-RELOGIN: one switch cycle - enter the world, "doi nhan vat" from the system menu, account screen with the
+        // account prefilled and an empty password, log in again; step 11 then continues to selection (12/46/32/33).
+#if defined(CYS_HAVE_NETCORE)
+        case 80:
+            require(visible("SelectRole_Play"), "Relogin smoke: the enter-game button is not visible");
+            click("SelectRole_Play"); enterFallbackAt_ = 0; enterFallbackDone_ = false;
+            TDU_Log("CYS relogin smoke: cycle=%u clicked the enter-game button", switchDone_ + 1);
+            next_=now+1000; ++step_; return;
+        case 81:
+            if (!(CysModernGame::IsInWorld() && CysModernHandlers::WorldReady()))
+            {
+                // Same native fallback as case 51 when the CY button handler does not request the character login.
+                if (!enterFallbackAt_) enterFallbackAt_ = now;
+                if (!enterFallbackDone_ && now-enterFallbackAt_ >= 8000 && characterSelection)
+                {
+                    enterFallbackDone_ = true;
+                    TDU_Log("CYS relogin smoke: native SendEnterGameMsg(0) rc=%d", CGameProcedure::s_pProcCharSel->SendEnterGameMsg(0));
+                }
+                next_=now+250; return;
+            }
+            TDU_Log("CYS relogin smoke: cycle=%u phase=in_world", switchDone_ + 1);
+            CysModernGame::LogStatsNow();
+            shot(renderer,"relogin-world");
+            next_=now+3000; ++step_; return;
+        case 82:
+            // Alt+F4 of the user opens the CY system menu (see case 52).
+            PostMessageW(g_hMainWnd, WM_SYSCOMMAND, SC_CLOSE, 0);
+            next_=now+2500; ++step_; return;
+        case 83:
+        {
+            const char* item = visible("Operation_2Menu") ? "Operation_2Menu" : "Operation_WeGame_2Menu";
+            require(visible(item), "Relogin smoke: the change-character item of the system menu is not visible");
+            click(item);
+            TDU_Log("CYS relogin smoke: cycle=%u clicked %s (ReturnServerLogin)", switchDone_ + 1, item);
+            next_=now+250; ++step_; return;
+        }
+        case 84:
+            // The prefill lands one frame after the account screen opens; the 750 ms step gap covers it.
+            if (CGameProcedure::GetActiveProcedure() != (CGameProcedure*)CGameProcedure::s_pProcLogIn ||
+                CysModernGame::IsActive() || !visible("LogOn_ID")) { next_=now+250; return; }
+            break;
+        case 85:
+            checkText("LogOn_ID",smokeAccount());
+            checkText("LogOn_PassWord","");
+            shot(renderer,"relogin-account");
+            {
+                // Evidence only: visible_game_windows=0 is counted right after the hide, so list what shows now.
+                typedef int (__cdecl *DumpFn)(char*, unsigned);
+                HMODULE ui = GetModuleHandleA("UI_CEGUI.dll");
+                DumpFn dump = ui ? reinterpret_cast<DumpFn>(GetProcAddress(ui, "CysUiDumpVisibleWindowsUtf8")) : nullptr;
+                static char windows[8192];
+                windows[0] = 0;
+                if (dump) dump(windows, sizeof(windows));
+                TDU_Log("CYS relogin smoke: visible after return: %s", windows);
+            }
+            TDU_Log("CYS relogin smoke: cycle=%u account screen, account prefilled, password empty", switchDone_ + 1);
+            ++switchDone_;
+            click("LogOn_PassWord"); break;
+        case 86:
+            focus("LogOn_PassWord");
+            require(switchSecret_[0] != 0, "Relogin smoke: kept test password missing");
+            chars(switchSecret_);
+            if (switchDone_ == switchCycles_) SecureZeroMemory(switchSecret_, sizeof(switchSecret_));
+            break;
+        case 87:
+            checkText("LogOn_ID",smokeAccount());
+            key(VK_RETURN);
+            TDU_Log("CYS GL smoke: submitted once through GL TextAccepted");
+            step_=11; next_=now+750; return;
+#endif
         default: require(false,"GL smoke: invalid test state");
         }
         ++step_; next_=now+750;

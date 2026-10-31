@@ -245,6 +245,7 @@ namespace
 #include "CysHost_Plumbing.h" // CYS-PLUMB: shared host plumbing measured on the live client (17/09).
 #include "CysHost_Accel.h" // CYS-ACCEL: read-only key list of the CY remap window.
 #include "CysHost_Sefit.h" // CYS-SEFIT: host functions whose generated stub has the wrong SHAPE.
+#include "CysHostRelogin.h" // CYS-RELOGIN: ReturnServerLogin (system menu "doi nhan vat").
 #include "CysUiInputBridge.h"
 #include "TDObjectSystem.h"
 #include <stdexcept>
@@ -729,6 +730,8 @@ VOID CGameProcedure::InitStaticMemeber(VOID)
 		LuaPlus::LuaObject hostGlobals = CScriptSystem::GetMe()->GetLuaState()->GetGlobals();
 		CysHostGlobals::Register(hostGlobals, hostServices);
 		CysHostGlobals::RegisterTalk(hostGlobals, hostServices);
+		// CYS-RELOGIN: before the first RegisterAll, so a regenerated ReturnServerLogin stub can never win.
+		TDU_Log("CYS relogin: ReturnServerLogin registered=%u", CysHostRelogin::Register(hostGlobals));
 		CysHostInput::Services inputServices;
 		inputServices.activeInputName = _CysActiveInputName;
 		inputServices.capsLockStatus = _CysCapsLockStatus;

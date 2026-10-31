@@ -139,6 +139,14 @@ public:
 	VOID		Init(VOID);
 	// 关闭所有窗口
 	VOID		HideAllWindow(VOID); 
+	// CYS-RELOGIN: layouts whose item is still shown (0 right after HideAllWindow).
+	INT			CountShownWindows(VOID) const
+	{
+		INT shown = 0;
+		for (WINDOWLIST::const_iterator it = m_aWindowList.begin(); it != m_aWindowList.end(); ++it)
+			if ((*it)->IsWindowShow()) ++shown;
+		return shown;
+	}
 	//某组ui是否处于打开中
 	BOOL		IsWindowShow(LPCTSTR szUIName);
 	// CYS: return FALSE for unknown names; an already hidden layout is valid.
