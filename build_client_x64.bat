@@ -89,17 +89,17 @@ if not "%NINJA_BIN%"=="" (
 )
 
 rem -------------------------------------------------------------------------------
-rem 3. Kiem tra Thu vien DirectX 9 SDK x64 (d3d9.lib, d3dx9.lib, dxguid.lib)
+rem 3. Kiem tra Thu vien DirectX 9 SDK x64 (d3dx9.lib, DxErr9.lib)
 rem -------------------------------------------------------------------------------
 echo.
 echo [3/4] Kiem tra thu vien do hoa DirectX 9 x64 SDK...
 set "DX9_DIR=%ROOT%\Src\ThirdParty\DirectX9\Lib\x64"
 
-if exist "%DX9_DIR%\d3d9.lib" if exist "%DX9_DIR%\d3dx9.lib" (
-    echo    -^> [OK] Thu vien DirectX 9 x64: day du.
+if exist "%DX9_DIR%\d3dx9.lib" if exist "%DX9_DIR%\DxErr9.lib" (
+    echo    -^> [OK] Thu vien DirectX 9 x64: day du ^(d3dx9.lib, DxErr9.lib^).
 ) else (
     echo    -^> [THIEU] Thu vien DirectX 9 x64 SDK trong Src\ThirdParty\DirectX9\Lib\x64
-    echo       Can co cac file: d3d9.lib, d3dx9.lib, dxguid.lib
+    echo       Can co cac file: d3dx9.lib, DxErr9.lib ^(d3d9.lib va dxguid.lib lay tu Windows SDK^)
     set "HAS_ERROR=1"
 )
 
@@ -141,7 +141,20 @@ ping -n 3 127.0.0.1 >nul
 color 0F
 
 set "VS=%VS_PATH%"
+set "BLD_DIR=%ROOT%\Build\cmake\public-x64"
+if not exist "%ROOT%\..\client_GL\Bin64\cg.dll" if exist "%ROOT%\Play\Bin64\cg.dll" (
+    call "%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat" x64 >nul
+    "%CMAKE_BIN%" -S "%ROOT%\Src" -B "%BLD_DIR%" -G Ninja "-DCMAKE_MAKE_PROGRAM=%NINJA_BIN%" -DCMAKE_BUILD_TYPE=Release "-DCYS_CG_DLL=%ROOT%\Play\Bin64\cg.dll"
+)
 call "%ROOT%\Tools\build\build.cmd" x64 public-x64 Release
+if errorlevel 1 (
+    rem Du phong neu VS cai o thu muc tuy chinh ngoai C:\Program Files
+    call "%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat" x64 >nul
+    if not errorlevel 1 (
+        "%CMAKE_BIN%" -S "%ROOT%\Src" -B "%BLD_DIR%" -G Ninja "-DCMAKE_MAKE_PROGRAM=%NINJA_BIN%" -DCMAKE_BUILD_TYPE=Release
+        if not errorlevel 1 "%CMAKE_BIN%" --build "%BLD_DIR%" -- -k 0
+    )
+)
 
 if errorlevel 1 (
     color 0C
@@ -169,7 +182,7 @@ if exist "%ROOT%\Build\cmake\public-x64\bin\Game.exe" (
 )
 if exist "%ROOT%\Build\cmake\public-x64\bin\Render.dll" (
     copy /y "%ROOT%\Build\cmake\public-x64\bin\*.dll" "%ROOT%\Play\Bin64\" >nul
-    echo    -^> Da cap nhat toan bo DLL (Render.dll, OgreMain.dll,...)
+    echo    -^> Da cap nhat toan bo DLL ^(Render.dll, OgreMain.dll,...^)
 )
 if exist "%ROOT%\Build\cmake\public-x64\bin\TlbbViewer.exe" (
     copy /y "%ROOT%\Build\cmake\public-x64\bin\TlbbViewer.exe" "%ROOT%\Play\Bin64\" >nul
@@ -186,8 +199,8 @@ color 0A
 echo.
 echo ===============================================================================
 echo  BO CAI DA SAN SANG DE CHIA SE CHO ANH EM!
-echo  - File khoi dong Game:   %ROOT%\Run_Game.bat
-echo  - File xem 3D Offline:   %ROOT%\Run_Viewer.bat
+echo  - File khoi dong Game:   %ROOT%\Play\Play.cmd
+echo  - File xem 3D Offline:   %ROOT%\Play\Bin64\Run-TlbbViewer.cmd
 echo  - Thu muc chay thuc thi: %ROOT%\Play\Bin64
 echo ===============================================================================
 echo.
